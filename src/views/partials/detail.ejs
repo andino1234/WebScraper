@@ -1,0 +1,66 @@
+<%
+  const dl = h.deadline(o.Deadline);
+  const tone = h.LEVEL_TONE[o.RelevanceLevel] || 'low';
+  const labels = Object.fromEntries(statuses.map(s => [s.id, s.single]));
+  const desc = String(o.Description || '').trim();
+%>
+<div data-detail-id="<%= o.Id %>" data-status="<%= o.Status %>">
+  <div class="row" style="gap:8px">
+    <span class="deadline <%= dl.tone %>"><%= dl.text %></span>
+    <span class="pill"><span class="dot <%= tone %>"></span> Prioridad <%= o.RelevanceLevel %> · <%= o.RelevanceScore %> pts</span>
+  </div>
+  <div class="detail-title"><%= o.Title %></div>
+  <div class="row">
+    <a class="btn btn-primary" href="/o/<%= o.Id %>/abrir" target="_blank" rel="noopener">Abrir convocatoria ↗</a>
+    <button class="btn" type="button" data-copy="<%= o.Url %>">Copiar enlace</button>
+  </div>
+
+  <div class="section-label">Estado</div>
+  <div class="status-steps">
+    <% statuses.forEach(s => { %>
+      <button type="button" class="<%= s.id === o.Status ? 'on' : '' %> <%= s.id === 'descartada' ? 'discard' : '' %>" data-set="<%= s.id %>"><%= s.single %></button>
+    <% }) %>
+  </div>
+  <% if (o.StatusChangedAt && o.Status !== 'nueva') { %>
+    <div class="faint" style="font-size:.8rem">Cambiado <%= h.ago(o.StatusChangedAt) %><%= o.StatusUserName ? ' por ' + o.StatusUserName : '' %></div>
+  <% } %>
+
+  <dl class="facts">
+    <dt>País</dt><dd><%= h.flag(o.CountryIso) %> <%= o.CountryName || '—' %></dd>
+    <dt>Fecha límite</dt><dd><%= o.Deadline ? h.date(o.Deadline, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : 'No indicada por la fuente — revisa la convocatoria' %></dd>
+    <% if (o.Buyer) { %><dt>Organismo</dt><dd><%= o.Buyer %></dd><% } %>
+    <dt>Fuente</dt><dd><%= o.SourceName || '—' %></dd>
+    <% if (o.Reference) { %><dt>Referencia</dt><dd><%= o.Reference %></dd><% } %>
+    <% if (o.CategoryName) { %><dt>Tipo</dt><dd><%= o.CategoryName %></dd><% } %>
+    <% if (o.Budget) { %><dt>Presupuesto</dt><dd><%= o.Budget %></dd><% } %>
+    <% if (o.PublishedAt) { %><dt>Publicada</dt><dd><%= h.date(o.PublishedAt) %></dd><% } %>
+    <dt>Detectada</dt><dd><%= h.dateTime(o.DetectedAt) %></dd>
+  </dl>
+
+  <div class="section-label">Por qué aparece</div>
+  <% if (o.keywords && o.keywords.length) { %>
+    <div><% o.keywords.forEach(k => { %><span class="kw <%= k.w === 'título' ? 'title' : '' %>" title="<%= k.w ? 'En ' + k.w : '' %>"><%= k.k %> +<%= k.p %></span><% }) %></div>
+    <div class="help">Las palabras en azul aparecen en el título (valen el doble).</div>
+  <% } else { %>
+    <div class="faint">Sin palabras clave registradas.</div>
+  <% } %>
+
+  <div class="section-label">Notas del equipo</div>
+  <textarea data-notes placeholder="Ej.: pedir TDR completos, socio local, presupuesto estimado…"><%= o.Notes || '' %></textarea>
+  <div class="save-state" data-save-state>Se guarda automáticamente.</div>
+
+  <% if (desc) { %>
+    <div class="section-label">Descripción</div>
+    <div class="desc" data-desc><%= desc.slice(0, 8000) %></div>
+    <% if (desc.length > 600) { %><button class="linklike" type="button" data-expand style="padding-left:0">Ver todo</button><% } %>
+  <% } %>
+
+  <% if (o.history && o.history.length) { %>
+    <div class="section-label">Historial</div>
+    <ul class="history">
+      <% o.history.forEach(hh => { %>
+        <li><%= h.dateTime(hh.CreatedAt) %> · <%= hh.UserName || 'Sistema' %>: <%= labels[hh.FromStatus] || hh.FromStatus || '—' %> → <b><%= labels[hh.ToStatus] || hh.ToStatus %></b></li>
+      <% }) %>
+    </ul>
+  <% } %>
+</div>

@@ -1,0 +1,151 @@
+<%- include('partials/head') %>
+<%
+  const f = filters;
+  const cur = data.status || (f.estado === 'todas' ? 'todas' : 'nueva');
+  const NEXT = { nueva: ['interesa', '✓ Me interesa'], interesa: ['preparando', 'Preparar propuesta'], preparando: ['enviada', 'Marcar enviada'], enviada: ['ganada', 'Ganada'], perdida: ['nueva', 'Reabrir'], ganada: null, descartada: ['nueva', 'Recuperar'] };
+  const regionKeys = ['CA', 'CARIBE', 'MX', 'US', 'BR', 'REG'];
+  const anyFilter = f.q || f.region || f.pais || f.fuente || f.nivel || f.cierra || f.desde;
+%>
+<div class="page-head">
+  <h1>Oportunidades</h1>
+  <span class="spacer"></span>
+  <a class="btn" href="/exportar<%= h.qs(f, { estado: cur }) %>" title="Descargar en Excel lo que estás viendo">⬇ Excel</a>
+  <% if (user.isAdmin) { %><button class="btn btn-primary" type="button" data-run-all>⟳ Buscar ahora</button><% } %>
+</div>
+
+<nav class="tabs" aria-label="Estados">
+  <% statuses.forEach(s => { %>
+    <a href="/<%= h.qs({ ...f, estado: s.id }) %>" class="<%= cur === s.id ? 'active' : '' %>" title="<%= s.hint %>"><%= s.label %><span class="n"><%= counts[s.id] || 0 %></span></a>
+  <% }) %>
+  <a href="/<%= h.qs({ ...f, estado: 'todas' }) %>" class="<%= cur === 'todas' ? 'active' : '' %>">Todas</a>
+</nav>
+
+<form class="filters" method="get" action="/" id="filterForm">
+  <input type="hidden" name="estado" value="<%= cur %>">
+  <% if (f.region) { %><input type="hidden" name="region" value="<%= f.region %>"><% } %>
+  <div class="search"><input type="search" name="q" value="<%= f.q || '' %>" placeholder="Buscar por título, organismo o referencia…  ( / )" aria-label="Buscar" id="searchBox"></div>
+  <select name="pais" aria-label="País">
+    <option value="">Todos los países</option>
+    <% options.countries.forEach(c => { %><option value="<%= c.Id %>" <%= String(f.pais) === String(c.Id) ? 'selected' : '' %>><%= h.flag(c.IsoCode) %> <%= c.Name %> (<%= c.n %>)</option><% }) %>
+  </select>
+  <select name="cierra" aria-label="Fecha límite">
+    <option value="">Cualquier fecha límite</option>
+    <option value="7" <%= f.cierra === '7' ? 'selected' : '' %>>Cierra en 7 días</option>
+    <option value="14" <%= f.cierra === '14' ? 'selected' : '' %>>Cierra en 14 días</option>
+    <option value="30" <%= f.cierra === '30' ? 'selected' : '' %>>Cierra en 30 días</option>
+    <option value="sin" <%= f.cierra === 'sin' ? 'selected' : '' %>>Sin fecha límite</option>
+  </select>
+  <select name="nivel" aria-label="Prioridad">
+    <option value="">Toda prioridad</option>
+    <option value="Crítica,Alta" <%= f.nivel === 'Crítica,Alta' ? 'selected' : '' %>>Alta y crítica</option>
+    <option value="Crítica" <%= f.nivel === 'Crítica' ? 'selected' : '' %>>Solo crítica</option>
+    <option value="Media" <%= f.nivel === 'Media' ? 'selected' : '' %>>Media</option>
+  </select>
+  <select name="fuente" aria-label="Fuente">
+    <option value="">Todas las fuentes</option>
+    <% options.sources.forEach(s => { %><option value="<%= s.Id %>" <%= String(f.fuente) === String(s.Id) ? 'selected' : '' %>><%= s.Name %> (<%= s.n %>)</option><% }) %>
+  </select>
+  <select name="orden" aria-label="Orden">
+    <option value="relevancia" <%= !f.orden || f.orden === 'relevancia' ? 'selected' : '' %>>Más relevantes primero</option>
+    <option value="cierre" <%= f.orden === 'cierre' ? 'selected' : '' %>>Cierran antes primero</option>
+    <option value="recientes" <%= f.orden === 'recientes' ? 'selected' : '' %>>Más recientes primero</option>
+  </select>
+  <noscript><button class="btn" type="submit">Filtrar</button></noscript>
+</form>
+
+<div class="chips" aria-label="Regiones">
+  <a class="chip <%= !f.region ? 'on' : '' %>" href="/<%= h.qs({ ...f, region: '' }) %>">Todas las regiones</a>
+  <% regionKeys.forEach(k => { %>
+    <a class="chip <%= f.region === k ? 'on' : '' %>" href="/<%= h.qs({ ...f, region: f.region === k ? '' : k }) %>"><%= regions[k].short %></a>
+  <% }) %>
+  <a class="chip <%= f.desde === 'hoy' ? 'on' : '' %>" href="/<%= h.qs({ ...f, desde: f.desde === 'hoy' ? '' : 'hoy' }) %>">🆕 Llegaron hoy</a>
+  <% if (anyFilter) { %><a class="chip" href="/?estado=<%= cur %>">✕ Quitar filtros</a><% } %>
+</div>
+
+<div class="toolbar">
+  <label class="row" style="margin:0;gap:6px;cursor:pointer;color:var(--muted);font-weight:500">
+    <input type="checkbox" id="selectAll" style="width:16px;height:16px;accent-color:var(--accent)"> Seleccionar
+  </label>
+  <span><b id="totalCount"><%= data.total %></b> <%= data.total === 1 ? 'oportunidad' : 'oportunidades' %><%= !['enviada','ganada','perdida','descartada','todas'].includes(cur) && f.vencidas !== '1' ? ' vigentes' : '' %></span>
+  <div class="bulk" id="bulkBar">
+    <span id="bulkCount">0</span> seleccionadas:
+    <button class="btn btn-sm btn-ok" type="button" data-bulk="interesa">✓ Me interesan</button>
+    <button class="btn btn-sm btn-danger" type="button" data-bulk="descartada">✕ Descartar</button>
+    <select id="bulkMove" class="btn-sm" style="width:auto;padding:3px 6px">
+      <option value="">Mover a…</option>
+      <% statuses.forEach(s => { %><option value="<%= s.id %>"><%= s.single %></option><% }) %>
+    </select>
+  </div>
+  <span class="spacer"></span>
+  <% if (!['enviada','ganada','perdida','descartada'].includes(cur)) { %>
+    <a class="faint" href="/<%= h.qs({ ...f, vencidas: f.vencidas === '1' ? '' : '1' }) %>"><%= f.vencidas === '1' ? 'Ocultar vencidas' : 'Ver también vencidas' %></a>
+  <% } %>
+</div>
+
+<% if (!data.items.length) { %>
+  <div class="card empty">
+    <% if (cur === 'nueva' && !anyFilter) { %>
+      <div class="big">🎉</div><h2>Bandeja al día</h2>
+      <p>No hay oportunidades nuevas por revisar. La búsqueda automática corre cada día; las nuevas aparecerán aquí.</p>
+    <% } else { %>
+      <div class="big">🔍</div><h2>Sin resultados</h2>
+      <p>No hay oportunidades con estos filtros.</p>
+      <% if (anyFilter) { %><a class="btn" href="/?estado=<%= cur %>">Quitar filtros</a><% } %>
+    <% } %>
+  </div>
+<% } else { %>
+  <div class="list" id="list">
+    <% data.items.forEach(o => {
+         const dl = h.deadline(o.Deadline);
+         const tone = h.LEVEL_TONE[o.RelevanceLevel] || 'low';
+         const next = NEXT[o.Status];
+    %>
+      <div class="item" data-id="<%= o.Id %>" data-status="<%= o.Status %>" tabindex="0">
+        <input type="checkbox" class="sel" aria-label="Seleccionar" onclick="event.stopPropagation()">
+        <div style="min-width:0">
+          <div class="t"><%= o.Title %></div>
+          <div class="meta">
+            <span title="Prioridad: <%= o.RelevanceLevel %> (<%= o.RelevanceScore %> puntos)"><span class="dot <%= tone %>"></span> <span class="lvl <%= tone %>"><%= o.RelevanceLevel %></span></span>
+            <span class="sep"><%= h.flag(o.CountryIso) %> <%= o.CountryName || 'Sin país' %></span>
+            <span class="sep"><%= o.SourceName || '—' %></span>
+            <% if (o.Buyer && o.Buyer !== o.SourceName) { %><span class="sep"><%= o.Buyer.length > 60 ? o.Buyer.slice(0, 60) + '…' : o.Buyer %></span><% } %>
+            <% if (cur === 'todas') { %><span class="sep pill"><%= (statuses.find(s => s.id === o.Status) || {}).single %></span><% } %>
+          </div>
+          <% if (o.keywords && o.keywords.length) { %>
+            <div class="kws"><% o.keywords.slice(0, 5).forEach(k => { %><span class="kw <%= k.w === 'título' ? 'title' : '' %>"><%= k.k %></span><% }) %></div>
+          <% } %>
+        </div>
+        <div class="side">
+          <span class="deadline <%= dl.tone %>" title="<%= o.Deadline ? 'Fecha límite: ' + h.date(o.Deadline) : 'La fuente no indicó fecha límite' %>"><%= dl.text %></span>
+          <div class="actions">
+            <% if (next) { %><button class="btn btn-sm btn-ok" type="button" data-set="<%= next[0] %>"><%= next[1] %></button><% } %>
+            <% if (o.Status !== 'descartada') { %><button class="btn btn-sm btn-danger" type="button" data-set="descartada" title="Descartar (D)">✕</button><% } %>
+          </div>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+
+  <% if (data.pages > 1) { %>
+    <div class="pager">
+      <% if (data.page > 1) { %><a class="btn btn-sm" href="/<%= h.qs(f, { pagina: data.page - 1 }) %>">← Anterior</a><% } %>
+      <span>Página <%= data.page %> de <%= data.pages %></span>
+      <% if (data.page < data.pages) { %><a class="btn btn-sm" href="/<%= h.qs(f, { pagina: data.page + 1 }) %>">Siguiente →</a><% } %>
+    </div>
+  <% } %>
+  <div class="shortcuts">Atajos: <span class="kbd">J</span>/<span class="kbd">K</span> moverse · <span class="kbd">Enter</span> abrir · <span class="kbd">I</span> me interesa · <span class="kbd">D</span> descartar · <span class="kbd">/</span> buscar · <span class="kbd">Esc</span> cerrar</div>
+<% } %>
+
+<div class="drawer-backdrop" data-close-drawer></div>
+<aside class="drawer" id="drawer" aria-label="Detalle de la oportunidad" aria-hidden="true">
+  <div class="drawer-head">
+    <button class="btn btn-sm btn-ghost" type="button" data-nav="-1" title="Anterior (K)">↑</button>
+    <button class="btn btn-sm btn-ghost" type="button" data-nav="1" title="Siguiente (J)">↓</button>
+    <span class="spacer"></span>
+    <button class="btn btn-sm btn-ghost" type="button" data-close-drawer title="Cerrar (Esc)">✕ Cerrar</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</aside>
+
+<script>window.INBOX = { status: <%- JSON.stringify(cur) %>, openId: <%- JSON.stringify(openId) %>, statuses: <%- JSON.stringify(statuses.map(s => ({ id: s.id, label: s.single }))) %> };</script>
+<%- include('partials/foot') %>

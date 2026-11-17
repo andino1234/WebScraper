@@ -1,0 +1,28 @@
+<%- include('partials/head') %>
+<div class="page-head"><h1>Actividad de búsqueda</h1><span class="muted">Últimas revisiones de cada fuente</span>
+  <% if (sourceId) { %><a class="btn btn-sm" href="/actividad">Ver todas</a><% } %></div>
+<div class="card" style="padding:6px 8px">
+  <% if (!runs.length) { %><div class="empty"><div class="big">🕑</div><p>Todavía no hay búsquedas registradas.</p></div><% } else { %>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Fecha</th><th>Fuente</th><th>Resultado</th><th>Encontradas</th><th>Nuevas</th><th>Por qué no se guardaron las demás</th><th>Origen</th></tr></thead>
+    <tbody>
+    <% runs.forEach(r => {
+         const why = [['Duplicates','ya existían'],['OutOfRegion','fuera de la región'],['NoCountry','sin país identificable'],['LowScore','poco relevantes'],['Expired','vencidas'],['Excluded','excluidas'],['Invalid','sin título válido']].filter(([k]) => r[k]).map(([k, l]) => r[k] + ' ' + l).join(' · ');
+         const tone = { ok: 'ok', vacio: 'warn', error: 'danger', running: 'accent' }[r.Status] || '';
+    %>
+      <tr>
+        <td style="white-space:nowrap"><%= h.dateTime(r.StartedAt) %></td>
+        <td><a href="/actividad?fuente=<%= r.SourceId %>"><%= r.SourceName %></a></td>
+        <td><span class="pill <%= tone %>"><%= { ok: 'Funciona', vacio: 'Sin resultados', error: 'Error', running: 'En curso' }[r.Status] || r.Status %></span>
+          <% if (r.Status === 'error' && r.Message) { %><div class="source-err"><%= r.Message.split('\n').pop() %></div><% } %></td>
+        <td><%= r.Found %></td>
+        <td><b><%= r.Saved %></b></td>
+        <td class="faint" style="font-size:.82rem"><%= why || '—' %></td>
+        <td class="faint" style="font-size:.82rem"><%= r.Triggered || '' %></td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table></div>
+  <% } %>
+</div>
+<%- include('partials/foot') %>

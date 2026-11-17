@@ -1,0 +1,104 @@
+<%- include('partials/head') %>
+<%
+  const STATUS = { ok: ['ok', 'Funciona'], vacio: ['warn', 'Sin resultados'], error: ['danger', 'Error'] };
+  const CONN = Object.fromEntries(connectors.map(c => [c.id, c.label]));
+  const active = sources.filter(s => s.IsActive);
+  const inactive = sources.filter(s => !s.IsActive);
+%>
+<div id="sourcesPage"></div>
+<div class="page-head">
+  <h1>Fuentes</h1>
+  <span class="muted"><%= active.length %> activas</span>
+  <span class="spacer"></span>
+  <% if (user.isAdmin) { %>
+    <button class="btn" type="button" data-source-new>＋ Agregar fuente</button>
+    <button class="btn btn-primary" type="button" data-run-all>⟳ Buscar en todas ahora</button>
+  <% } %>
+</div>
+<div class="banner info">ℹ️ <span>Cada fuente se revisa sola una vez al día. <b>“Probar”</b> la ejecuta en el momento y te dice exactamente qué encontró y por qué descartó lo demás.</span></div>
+
+<% [['Activas', active], ['Inactivas', inactive]].forEach(([label, group]) => { if (!group.length) return; %>
+<div class="card" style="padding:6px 8px;margin-bottom:14px">
+  <h2 style="padding:10px 10px 0"><%= label %> (<%= group.length %>)</h2>
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th></th><th>Fuente</th><th>Tipo</th><th>Última revisión</th><th title="Oportunidades guardadas en los últimos 30 días">Últ. 30 días</th><th></th></tr></thead>
+    <tbody>
+    <% group.forEach(s => { const st = STATUS[s.LastStatus]; %>
+      <tr class="source-row">
+        <td>
+          <% if (user.isAdmin) { %>
+            <label class="switch" title="<%= s.IsActive ? 'Desactivar' : 'Activar' %>"><input type="checkbox" data-source-toggle="<%= s.Id %>" <%= s.IsActive ? 'checked' : '' %>><span></span></label>
+          <% } else { %><span class="dot <%= s.IsActive ? 'ok' : 'off' %>"></span><% } %>
+        </td>
+        <td>
+          <div class="source-name"><%= s.Name %> <% if (s.CountryName) { %><span class="faint" style="font-weight:400">· <%= s.CountryName %></span><% } %></div>
+          <a class="faint" style="font-size:.8rem" href="<%= s.Url %>" target="_blank" rel="noopener"><%= s.Url.length > 70 ? s.Url.slice(0, 70) + '…' : s.Url %></a>
+          <% if (s.LastStatus && s.LastStatus !== 'ok' && s.LastError) { %><div class="source-err"><%= s.LastError %></div><% } %>
+          <% if (s.Notes) { %><div class="source-note"><%= s.Notes %></div><% } %>
+        </td>
+        <td><span class="pill"><%= CONN[s.Connector] || s.Connector %></span></td>
+        <td>
+          <% if (st) { %><span class="pill <%= st[0] %>"><%= st[1] %></span><% } else { %><span class="pill">Nunca</span><% } %>
+          <div class="faint" style="font-size:.8rem;margin-top:3px"><%= h.ago(s.LastRunAt) %><% if (s.LastRunAt) { %> · <%= s.LastFound || 0 %> encontradas, <%= s.LastSaved || 0 %> nuevas<% } %></div>
+        </td>
+        <td><b><%= s.Opps30 %></b> <span class="faint">/ <%= s.TotalOpps %></span></td>
+        <td style="white-space:nowrap;text-align:right">
+          <button class="btn btn-sm btn-ghost" type="button" data-source-runs="<%= s.Id %>" data-name="<%= s.Name %>" title="Historial">🕑</button>
+          <% if (user.isAdmin) { %>
+            <button class="btn btn-sm" type="button" data-source-test="<%= s.Id %>">▶ Probar</button>
+            <button class="btn btn-sm btn-ghost" type="button" data-source-edit="<%= s.Id %>">Editar</button>
+          <% } %>
+        </td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table>
+  </div>
+</div>
+<% }) %>
+
+<dialog id="sourceDialog">
+  <form id="sourceForm" method="dialog">
+    <h2 id="sourceDialogTitle">Nueva fuente</h2>
+    <input type="hidden" name="id">
+    <div class="field"><label>Nombre</label><input type="text" name="name" required placeholder="Ej.: OIM Guatemala - Convocatorias"></div>
+    <div class="field"><label>Dirección de la página (URL)</label><input type="url" name="url" required placeholder="https://…">
+      <div class="help">Usa la página donde aparece el <b>listado</b> de convocatorias, no la portada del sitio.</div></div>
+    <div class="grid grid-2">
+      <div class="field"><label>Tipo de fuente</label>
+        <select name="connector"><% connectors.forEach(c => { %><option value="<%= c.id %>"><%= c.label %></option><% }) %></select>
+        <div class="help">Para cualquier sitio web normal, deja “Página web”.</div></div>
+      <div class="field"><label>País por defecto</label>
+        <select name="countryId"><option value="">Detectar del texto</option>
+          <% countries.forEach(c => { %><option value="<%= c.Id %>"><%= c.Name %></option><% }) %></select>
+        <div class="help">Se usa si la convocatoria no menciona el país.</div></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="field"><label>Categoría</label><input type="text" name="category" placeholder="ONG, Gobierno, Multilateral…"></div>
+      <div class="field"><label>Revisar cada</label>
+        <select name="frequencyMinutes"><option value="1440">1 día</option><option value="720">12 horas</option><option value="360">6 horas</option><option value="10080">1 semana</option></select></div>
+    </div>
+    <div class="field"><label>Notas</label><input type="text" name="notes" placeholder="Opcional"></div>
+    <details class="advanced"><summary>Configuración avanzada</summary>
+      <div class="field"><textarea name="config" rows="6" style="font-family:ui-monospace,monospace;font-size:.82rem">{}</textarea>
+        <div class="help">JSON opcional. Ejemplos: <code>{"useBrowser": true}</code> para páginas hechas con JavaScript · <code>{"hrefInclude": "convocatoria"}</code> para quedarse solo con enlaces cuya URL contenga esa palabra · <code>{"minScore": 15}</code> para ser más permisivo con esta fuente.</div></div>
+    </details>
+    <label class="row" style="color:var(--text)"><input type="checkbox" name="active" value="1"> Fuente activa</label>
+    <div class="form-error" id="sourceFormError"></div>
+    <div class="dialog-actions">
+      <button class="btn btn-danger" type="button" id="deleteSourceBtn" style="margin-right:auto">Borrar</button>
+      <button class="btn" type="button" data-close-dialog>Cancelar</button>
+      <button class="btn btn-primary" type="submit">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="testDialog">
+  <div class="dialog-body">
+    <h2 id="testTitle">Resultado</h2>
+    <div id="testBody"></div>
+    <div class="dialog-actions"><button class="btn" type="button" data-close-dialog>Cerrar</button></div>
+  </div>
+</dialog>
+<%- include('partials/foot') %>

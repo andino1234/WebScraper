@@ -1,0 +1,63 @@
+<%- include('partials/head') %>
+<div id="keywordsPage"></div>
+<div class="page-head"><h1>Palabras clave</h1><span class="muted">Definen qué tan relevante es cada convocatoria</span></div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h2>¿Cómo se calcula la prioridad?</h2>
+    <p class="muted" style="font-size:.9rem;margin:0">Cada palabra encontrada suma sus puntos; si está en el <b>título</b> suma el doble. Lo que aparece solo en la descripción suma como máximo 45 puntos, así que para ser Alta o Crítica el título debe mencionar algo relevante. No importan mayúsculas ni acentos, y “consult” encuentra también “consultoría” y “consultant”.
+      Siglas cortas en mayúsculas (TOR, RFP) solo cuentan si aparecen tal cual.<br>
+      <b>Baja</b> &lt; 25 · <b>Media</b> 25–49 · <b>Alta</b> 50–99 · <b>Crítica</b> 100+. Se guardan solo las que tienen <b>al menos una palabra clave en el título</b> y llegan a <b><%= process.env.MIN_SCORE || 25 %></b> puntos.</p>
+  </div>
+  <div class="card">
+    <h2>Probar un título</h2>
+    <input type="text" id="tryText" placeholder="Pega aquí el título de una convocatoria…">
+    <div id="tryResult" data-min="<%= process.env.MIN_SCORE || 25 %>" style="margin-top:10px;font-size:.9rem"></div>
+  </div>
+</div>
+
+<div class="card">
+  <form id="kwForm" class="row">
+    <input type="text" name="keyword" placeholder="Nueva palabra o frase (español, inglés o portugués)" required style="flex:1 1 260px">
+    <select name="group" style="width:auto"><% groups.forEach(g => { %><option><%= g %></option><% }) %></select>
+    <input type="number" name="points" value="25" min="1" max="100" style="width:90px" title="Puntos">
+    <button class="btn btn-primary" type="submit">Agregar</button>
+  </form>
+  <div class="help">Principal: describe el tipo de servicio (consultoría, investigación). Relacionada: actividades (encuesta, evaluación). General: temas de interés (salud, juventud).</div>
+</div>
+
+<div class="card" style="padding:6px 8px">
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Activa</th><th>Palabra</th><th>Grupo</th><th>Puntos</th><th title="En cuántas oportunidades guardadas aparece">Apariciones</th><th></th></tr></thead>
+    <tbody>
+    <% keywords.forEach(k => { %>
+      <tr>
+        <td><label class="switch"><input type="checkbox" data-kw="<%= k.Id %>" data-field="active" <%= k.IsActive ? 'checked' : '' %>><span></span></label></td>
+        <td><b><%= k.Keyword %></b></td>
+        <td><select data-kw="<%= k.Id %>" data-field="group" style="width:auto"><% groups.forEach(g => { %><option <%= g === k.GroupName ? 'selected' : '' %>><%= g %></option><% }) %></select></td>
+        <td><input type="number" min="1" max="100" value="<%= k.Points %>" data-kw="<%= k.Id %>" data-field="points" style="width:80px"></td>
+        <td class="faint"><%= k.Hits %></td>
+        <td style="white-space:nowrap;text-align:right">
+          <button class="btn btn-sm btn-ghost" type="button" data-kw-ban="<%= k.Id %>" title="Pasar a la lista negra: las convocatorias con esta palabra en el título no se guardarán">⛔ Lista negra</button>
+          <button class="btn btn-sm btn-ghost btn-danger" type="button" data-kw-delete="<%= k.Id %>">Eliminar</button></td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table></div>
+</div>
+
+<div class="card">
+  <h2>Lista negra (exclusiones)</h2>
+  <p class="muted" style="font-size:.9rem;margin-top:0">Estas palabras <b>nunca suman puntos</b>, y si una aparece en el <b>título</b> la convocatoria no se guarda (por ejemplo: “vacante”, “suministro de combustible”). También se respetan los títulos que el equipo marcó como “no aplicar” en la versión anterior.</p>
+  <form id="exForm" class="row" style="margin-bottom:10px">
+    <input type="text" name="keyword" placeholder="Palabra o frase a excluir" required style="flex:1 1 240px">
+    <input type="text" name="reason" placeholder="Motivo (opcional)" style="flex:1 1 200px">
+    <button class="btn" type="submit">Agregar exclusión</button>
+  </form>
+  <% if (!exclusions.length) { %><p class="faint">No hay exclusiones.</p><% } else { %>
+  <table class="table"><tbody>
+    <% exclusions.forEach(x => { %><tr><td><b><%= x.Keyword %></b></td><td class="faint"><%= x.Reason || '' %></td><td style="text-align:right"><button class="btn btn-sm btn-ghost btn-danger" type="button" data-ex-delete="<%= x.Id %>">Quitar</button></td></tr><% }) %>
+  </tbody></table>
+  <% } %>
+</div>
+<%- include('partials/foot') %>

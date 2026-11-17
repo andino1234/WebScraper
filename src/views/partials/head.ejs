@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="author" content="Ariel Geovanny Andino Chinchilla">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="csrf-token" content="<%= csrfToken %>">
+<title><%= title %> · Licitaciones Insight</title>
+<link rel="icon" href="/images/logo.png">
+<script>try{var t=localStorage.getItem('theme');if(!t&&matchMedia('(prefers-color-scheme: dark)').matches)t='dark';if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
+<link rel="stylesheet" href="/css/app.css?v=2">
+</head>
+<body>
+<div class="mobile-bar">
+  <button class="btn btn-sm" type="button" data-toggle-nav aria-label="Abrir menú">☰</button>
+  <strong>Licitaciones</strong>
+</div>
+<div class="app">
+  <aside class="sidebar" aria-label="Navegación principal">
+    <div class="brand"><img src="/images/logo.png" alt=""><div>Licitaciones<small>Insight Latam</small></div></div>
+    <nav class="nav">
+      <a href="/" class="<%= active === 'inbox' ? 'active' : '' %>"><span class="ico">📥</span>Oportunidades</a>
+      <a href="/panel" class="<%= active === 'panel' ? 'active' : '' %>"><span class="ico">📊</span>Panel</a>
+      <a href="/fuentes" class="<%= active === 'sources' ? 'active' : '' %>"><span class="ico">🌐</span>Fuentes</a>
+      <a href="/actividad" class="<%= active === 'activity' ? 'active' : '' %>"><span class="ico">🕑</span>Actividad</a>
+      <% if (user && user.isAdmin) { %>
+        <div class="nav-label">Configuración</div>
+        <a href="/palabras" class="<%= active === 'keywords' ? 'active' : '' %>"><span class="ico">🏷️</span>Palabras clave</a>
+        <a href="/usuarios" class="<%= active === 'users' ? 'active' : '' %>"><span class="ico">👥</span>Usuarios</a>
+      <% } %>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="who"><b><%= user.name %></b><span class="faint"><%= user.isAdmin ? 'Administrador' : 'Equipo' %></span></div>
+      <a class="linklike" href="/cuenta" style="display:block">Mi cuenta</a>
+      <button type="button" data-theme-toggle>Cambiar tema</button>
+      <button type="button" data-logout>Cerrar sesión</button>
+    </div>
+  </aside>
+  <main class="main" id="main">

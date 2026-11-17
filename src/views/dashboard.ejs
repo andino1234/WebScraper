@@ -1,0 +1,100 @@
+<%- include('partials/head') %>
+<%
+  const k = Object.fromEntries(Object.entries(d.kpi || {}).map(([a, b]) => [a, Number(b || 0)]));
+  const maxDay = Math.max(1, ...d.days.map(x => x.n));
+  const maxReg = Math.max(1, ...d.byRegion.map(x => x.n));
+  const hl = Object.fromEntries(Object.entries(d.health || {}).map(([k, v]) => [k, k === 'ultima' ? v : Number(v || 0)]));
+  const fallando = hl.conError + hl.vacias;
+%>
+<div class="page-head">
+  <h1>Panel</h1>
+  <span class="muted">Última búsqueda: <%= h.ago(hl.ultima) %></span>
+  <span class="spacer"></span>
+  <% if (user.isAdmin) { %><button class="btn btn-primary" type="button" data-run-all>⟳ Buscar ahora</button><% } %>
+</div>
+
+<div class="grid grid-4">
+  <a class="card kpi" href="/?estado=nueva">
+    <div class="label">Por revisar</div><div class="value"><%= k.porRevisar || 0 %></div>
+    <div class="sub"><%= k.nuevasHoy || 0 %> llegaron hoy</div>
+  </a>
+  <a class="card kpi" href="/?estado=nueva&nivel=Cr%C3%ADtica,Alta">
+    <div class="label">Prioridad alta sin revisar</div><div class="value"><%= k.prioritarias || 0 %></div>
+    <div class="sub">Empieza por aquí</div>
+  </a>
+  <a class="card kpi <%= (k.vencenSemana || 0) > 0 ? 'alert' : '' %>" href="/?estado=interesa&cierra=7&orden=cierre">
+    <div class="label">Vencen esta semana</div><div class="value"><%= k.vencenSemana || 0 %></div>
+    <div class="sub">Entre “me interesa” y “preparando”</div>
+  </a>
+  <a class="card kpi" href="/?estado=preparando">
+    <div class="label">En preparación</div><div class="value"><%= k.preparando || 0 %></div>
+    <div class="sub"><%= k.enviadas || 0 %> enviadas · <%= k.ganadas || 0 %> ganadas</div>
+  </a>
+</div>
+
+<% if (fallando > 0) { %>
+  <div class="banner warn" style="margin-top:14px">
+    ⚠️ <span><b><%= fallando %> <%= fallando === 1 ? 'fuente' : 'fuentes' %></b> no <%= fallando === 1 ? 'trajo' : 'trajeron' %> resultados en su última revisión
+    (<% d.failing.slice(0, 3).forEach((s, i) => { %><%= i ? ', ' : '' %><%= s.Name %><% }) %><%= d.failing.length > 3 ? '…' : '' %>).</span>
+    <a class="btn btn-sm" href="/fuentes" style="margin-left:auto">Revisar fuentes</a>
+  </div>
+<% } %>
+
+<div class="grid grid-2" style="margin-top:14px">
+  <div class="card">
+    <h2>⏰ Próximos cierres del equipo</h2>
+    <% if (!d.urgent.length) { %><p class="muted">Nada en curso. Marca oportunidades con “Me interesa” para verlas aquí.</p><% } else { %>
+      <ul class="mini-list">
+        <% d.urgent.forEach(o => { const dl = h.deadline(o.Deadline); %>
+          <li><span class="deadline <%= dl.tone %>"><%= dl.text %></span>
+            <div class="grow"><a href="/?estado=<%= o.Status %>&abrir=<%= o.Id %>"><%= o.Title %></a><div class="faint" style="font-size:.8rem"><%= h.flag(o.CountryIso) %> <%= o.CountryName %> · <%= o.Status === 'preparando' ? 'Preparando' : 'Me interesa' %></div></div></li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </div>
+  <div class="card">
+    <h2>⭐ Lo más relevante sin revisar</h2>
+    <% if (!d.top.length) { %><p class="muted">No hay oportunidades nuevas.</p><% } else { %>
+      <ul class="mini-list">
+        <% d.top.forEach(o => { const tone = h.LEVEL_TONE[o.RelevanceLevel] || 'low'; %>
+          <li><span class="dot <%= tone %>" style="margin-top:7px"></span>
+            <div class="grow"><a href="/?abrir=<%= o.Id %>"><%= o.Title %></a><div class="faint" style="font-size:.8rem"><%= h.flag(o.CountryIso) %> <%= o.CountryName %> · <%= o.SourceName %> · <%= h.deadline(o.Deadline).text %></div></div></li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </div>
+</div>
+
+<div class="grid grid-2" style="margin-top:14px">
+  <div class="card">
+    <h2>Oportunidades nuevas por día</h2>
+    <div class="bars">
+      <% d.days.forEach(x => { %><div class="b" style="height:<%= Math.round(x.n / maxDay * 100) %>%" title="<%= h.date(x.date, { day: '2-digit', month: 'short' }) %>: <%= x.n %>"></div><% }) %>
+    </div>
+    <div class="bars-x"><span><%= h.date(d.days[0].date, { day: '2-digit', month: 'short' }) %></span><span>hoy</span></div>
+  </div>
+  <div class="card">
+    <h2>Oportunidades abiertas por región</h2>
+    <% if (!d.byRegion.length) { %><p class="muted">Sin datos todavía.</p><% } %>
+    <% d.byRegion.forEach(r => { %>
+      <a class="hbar" href="/?estado=todas&region=<%= r.Region %>" style="color:inherit;text-decoration:none">
+        <span><%= (regions[r.Region] || { name: 'Sin región' }).name %></span>
+        <span class="track"><span class="fill" style="display:block;width:<%= Math.round(r.n / maxReg * 100) %>%"></span></span>
+        <b><%= r.n %></b>
+      </a>
+    <% }) %>
+  </div>
+</div>
+
+<div class="card" style="margin-top:14px">
+  <h2>Estado de las fuentes</h2>
+  <div class="row" style="gap:18px">
+    <span><span class="dot ok"></span> <b><%= hl.ok || 0 %></b> funcionando</span>
+    <span><span class="dot warn"></span> <b><%= hl.vacias || 0 %></b> sin resultados</span>
+    <span><span class="dot danger"></span> <b><%= hl.conError || 0 %></b> con error</span>
+    <span><span class="dot off"></span> <b><%= hl.sinCorrer || 0 %></b> sin revisar aún</span>
+    <span class="faint">de <%= hl.activas || 0 %> fuentes activas</span>
+    <a href="/fuentes" style="margin-left:auto">Ver fuentes →</a>
+  </div>
+</div>
+<%- include('partials/foot') %>

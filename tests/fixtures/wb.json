@@ -1,0 +1,8 @@
+{"rows":500,"total":"5","procnotices":[
+ {"id":"OP1","notice_type":"Request for Expression of Interest","noticedate":"10-Nov-2099","project_ctry_name":"Guatemala","submission_deadline_date":"2099-12-15T00:00:00Z","bid_description":"Consultancy for baseline survey and impact evaluation of the nutrition program","procurement_group":"CS","contact_organization":"Ministerio de Salud","bid_reference_no":"GT-MSPAS-1"},
+ {"id":"OP2","notice_type":"Invitation for Bids","noticedate":"10-Nov-2099","project_ctry_name":"Kenya","submission_deadline_date":"2099-12-15T00:00:00Z","bid_description":"Consultancy for baseline survey in Nairobi","procurement_group":"CS"},
+ {"id":"OP3","notice_type":"Contract Award","noticedate":"10-Nov-2099","project_ctry_name":"Honduras","bid_description":"Award of consulting research"},
+ {"id":"OP4","notice_type":"Invitation for Bids","noticedate":"10-Nov-2099","project_ctry_name":"Honduras","submission_deadline_date":"2099-12-01T00:00:00Z","bid_description":"Supply of asphalt for road works","procurement_group":"CW"},
+ {"id":"OP5","notice_type":"Request for Expression of Interest","noticedate":"01-Jan-2020","project_ctry_name":"Haiti","submission_deadline_date":"2020-02-01T00:00:00Z","bid_description":"Consultant for monitoring and evaluation","procurement_group":"CS"},
+ {"id":"OP6","notice_type":"Request for Expression of Interest","noticedate":"10-Nov-2099","project_ctry_name":"Western and Central Africa","contact_ctry_name":"St. Lucia","submission_deadline_date":"2099-12-20T00:00:00Z","bid_description":"Market research consultancy for tourism sector","procurement_group":"CS"}
+]}
